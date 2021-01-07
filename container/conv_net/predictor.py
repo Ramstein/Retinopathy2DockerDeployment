@@ -149,14 +149,13 @@ def input_fn(request_body, request_content_type='application/json'):
         region = input_object['region']
 
         logger.info('Downloading the input diabetic retinopathy data.')
-        for i in range(100):
+        for i in range(10):
             try:
                 img = input_object[f'img{str(i)}']
                 download_from_s3(region=region, bucket=bucket, s3_filename=img, local_path=data_dir)
                 image_name.append(img)
             except KeyError as e:
                 print(e)
-                break
 
         image_df = DataFrame(image_name, columns=['id_code'])
         image_paths = image_df['id_code'].apply(lambda x: image_with_name_in_dir(data_dir, x))

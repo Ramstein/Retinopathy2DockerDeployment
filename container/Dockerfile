@@ -1,55 +1,4 @@
-#FROM ubuntu:16.04
-#
-#RUN apt-get update && apt-get install -y --allow-downgrades --no-install-recommends \
-#         build-essential \
-#         cmake \
-#         git \
-#         curl \
-#         vim \
-#         ca-certificates \
-#         python-qt4 \
-#         libjpeg-dev \
-#	       zip \
-#	       unzip \
-#         nginx \
-#         libpng-dev &&\
-#     rm -rf /var/lib/apt/lists/*
-#
-#ENV PYTHON_VERSION=3.6
-#RUN curl -o ~/miniconda.sh -O  https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh  && \
-#     chmod +x ~/miniconda.sh && \
-#     ~/miniconda.sh -b -p /opt/conda && \
-#     rm ~/miniconda.sh && \
-#    /opt/conda/bin/conda install conda-build
-#
-#RUN git clone https://github.com/mattmcclean/fastai.git
-#RUN cd fastai/ && ls && /opt/conda/bin/conda env create -f environment-cpu.yml
-#RUN /opt/conda/bin/conda clean -ya
-#
-#ENV PATH /opt/conda/envs/fastai-cpu/bin:$PATH
-#ENV USER fastai
-#
-#WORKDIR /fastai
-#
-#CMD source activate fastai-cpu
-#CMD source ~/.bashrc
-#
-## Here we install the extra python packages to run the inference code
-#RUN pip install flask gevent gunicorn && \
-#        rm -rf /root/.cache
-#
-#ENV PYTHONUNBUFFERED=TRUE
-#ENV PYTHONDONTWRITEBYTECODE=TRUE
-#ENV PATH="/opt/program:${PATH}"
-#
-## Set up the program in the image
-#COPY conv_net /opt/program
-#WORKDIR /opt/program
-#RUN chmod 755 serve
-#
-#RUN ln -s /fastai/fastai fastai
-
-FROM ubuntu:16.04
+FROM ubuntu:18.04
 
 LABEL maintainer="Amazon AI"
 LABEL dlc_major_version="1"
@@ -104,13 +53,6 @@ RUN curl -L -o ~/miniconda.sh https://repo.continuum.io/miniconda/Miniconda3-lat
  && /opt/conda/bin/conda update conda \
  && /opt/conda/bin/conda install -y \
     python=$PYTHON_VERSION \
-    cython==0.29.21 \
-    ipython==7.19.0 \
-    mkl-include==2020.1.1 \
-    mkl==2020.1.1 \
-    numpy==1.19.5 \
-    scipy==1.6.0 \
-    typing==3.7.4.3 \
  && /opt/conda/bin/conda clean -ya
 
 
@@ -131,29 +73,33 @@ ENV LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/home/.openmpi/lib/"
 RUN ompi_info --parsable --all | grep mpi_built_with_cuda_support:value
 
 
-RUN conda install -c \
-    conda-forge \
-    opencv==4.0.1 \
- && conda install -y \
-    scikit-learn==0.21.3 \
-    pandas==0.25.0 \
-    h5py==2.9.0 \
-    requests==2.22.0 \
- && conda clean -ya \
- && pip install --upgrade pip --trusted-host pypi.org --trusted-host files.pythonhosted.org \
+RUN pip install --upgrade pip --trusted-host pypi.org --trusted-host files.pythonhosted.org \
  && ln -s /opt/conda/bin/pip /usr/local/bin/pip3 \
- && pip install packaging==20.4 \
+    cython==0.29.15 \
+    ipython==7.12.0 \
+    mkl==2020.0 \
+    numpy==1.19.4 \
+    scipy==1.4.1 \
+    typing==3.7.4.3 \
+    opencv-python==4.2.0.32\
+    scikit-learn==0.21.3 \
+    pandas==0.24.2 \
+    h5py==2.10.0 \
+    requests==2.25.0 \
+    packaging==20.7 \
     enum-compat==0.0.3 \
-    "cryptography>3.2" \
+    cryptography==2.8 \
+    pillow==7.0.0 \
  && conda install -y -c pytorch torchserve=$TS_VERSION \
  && conda install -y -c pytorch torch-model-archiver=$TS_VERSION
+ && rm -rf /root/.cache
+
 
 
 # Uninstall and re-install torch and torchvision from the PyTorch website
-RUN pip uninstall -y torch \
- && pip install --no-cache-dir -U $PT_INFERENCE_URL \
- && pip uninstall -y torchvision \
- && pip install --no-deps --no-cache-dir -U $PT_VISION_URL
+RUN pip install --no-cache-dir torch==1.7.1 \
+ && pip install --no-deps --no-cache-dir torchvision==0.8.2
+ && rm -rf /root/.cache
 
 
 RUN useradd -m model-server \
@@ -174,7 +120,6 @@ RUN pip install --no-cache-dir "sagemaker-pytorch-inference>=2"
 RUN curl https://aws-dlc-licenses.s3.amazonaws.com/pytorch-1.6.0/license.txt -o /license.txt
 
 RUN conda install -y -c conda-forge pyyaml==5.3.1
-RUN pip install pillow==8.0 "awscli<2"
 
 EXPOSE 8080 8081
 ENTRYPOINT ["python", "/usr/local/bin/dockerd-entrypoint.py"]
@@ -182,20 +127,15 @@ CMD ["torchserve", "--start", "--ts-config", "/home/model-server/config.properti
 
 
 
-
-RUN git clone https://github.com/RamsteinWR/Retinopathy2.git
-RUN cd Retinopathy2/ && ls && pip install -r requirements.txt
-
-ENV PATH /opt/conda/envs/Retinopathy2:$PATH
-WORKDIR /Retinopathy2
-
 # # AssertionError: NVidia Apex package must be installed. See https://github.com/NVIDIA/apex.
 # RUN pip install --quiet -v --no-cache-dir --global-option="--cpp_ext" --global-option="--cuda_ext" git+https://github.com/NVIDIA/apex
 # RUN pip install git+https://github.com/mapillary/inplace_abn.git@v1.0.3
 
 # Here we install the extra python packages to run the inference code
-RUN pip install flask gevent gunicorn && \
-        rm -rf /root/.cache
+RUN pip install flask==1.1.1 \
+        gevent==1.4.0 \
+        gunicorn \
+        && rm -rf /root/.cache
 
 ENV PYTHONUNBUFFERED=TRUE
 ENV PYTHONDONTWRITEBYTECODE=TRUE
@@ -204,6 +144,11 @@ ENV PATH="/opt/program:${PATH}"
 
 # Set up the program in the image
 COPY conv_net /opt/program
+
+RUN git clone https://github.com/RamsteinWR/Retinopathy2.git
+RUN cd Retinopathy2/ && ls && pip install -r requirements.txt && rm -rf /root/.cache
+RUN cd ..
+COPY Retinopathy2  /opt/program
 WORKDIR /opt/program
 RUN chmod 755 serve
 

@@ -16,6 +16,12 @@ from os import path, makedirs
 import boto3
 import flask
 import torch
+from Retinopathy2.retinopathy.augmentations import get_test_transform
+from Retinopathy2.retinopathy.dataset import RetinopathyDataset, get_class_names
+from Retinopathy2.retinopathy.factory import get_model
+from Retinopathy2.retinopathy.inference import ApplySoftmaxToLogits, FlipLRMultiheadTTA, Flip4MultiheadTTA, \
+    MultiscaleFlipLRMultiheadTTA
+from Retinopathy2.retinopathy.train_utils import report_checkpoint
 from botocore.exceptions import ClientError
 from catalyst.utils import load_checkpoint, unpack_checkpoint
 from flask_jwt_extended.exceptions import NoAuthorizationError
@@ -24,13 +30,6 @@ from pytorch_toolbelt.utils.torch_utils import to_numpy
 from torch import nn
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-
-from Retinopathy2.retinopathy.augmentations import get_test_transform
-from Retinopathy2.retinopathy.dataset import RetinopathyDataset, get_class_names
-from Retinopathy2.retinopathy.factory import get_model
-from Retinopathy2.retinopathy.inference import ApplySoftmaxToLogits, FlipLRMultiheadTTA, Flip4MultiheadTTA, \
-    MultiscaleFlipLRMultiheadTTA
-from Retinopathy2.retinopathy.train_utils import report_checkpoint
 
 '''Not Changing variables'''
 data_dir = '/opt/ml/input/data'
@@ -149,7 +148,7 @@ def input_fn(request_body, request_content_type='application/json'):
         region = input_object['region']
 
         logger.info('Downloading the input diabetic retinopathy data.')
-        for i in range(10):
+        for i in range(13):  # 3 values for region, access, token
             try:
                 img = input_object[f'img{str(i)}']
                 download_from_s3(region=region, bucket=bucket, s3_filename=img, local_path=data_dir)
@@ -286,7 +285,9 @@ def transformation():
     it to a pandas data frame for internal use and then convert the predictions back to CSV (which really
     just means one prediction per line, since there's a single column.
     """
+    makedirs(data_dir, exist_ok=True)
     print("cleaning test dir")
+
     for root, dirs, files in os.walk(data_dir):
         for f in files:
             os.unlink(os.path.join(root, f))

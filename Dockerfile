@@ -247,8 +247,9 @@ ENV PATH="/opt/program:${PATH}"
 RUN git clone https://github.com/Ramstein/Retinopathy2DockerDeployment.git
 COPY Retinopathy2DockerDeployment  /opt/program
 
+RUN mkdir -p /opt/program/Retinopathy2
 RUN git clone https://github.com/Ramstein/Retinopathy2.git
-COPY Retinopathy2  /opt/program
+COPY Retinopathy2  /opt/program/Retinopathy2
 RUN cd Retinopathy2/ && ls && pip install -r requirements.txt && rm -rf /root/.cache
 WORKDIR /opt/program
 RUN chmod 755 serve

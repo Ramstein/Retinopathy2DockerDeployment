@@ -75,7 +75,7 @@ RUN ompi_info --parsable --all | grep mpi_built_with_cuda_support:value
 
 RUN pip install --upgrade pip --trusted-host pypi.org --trusted-host files.pythonhosted.org \
  && ln -s /opt/conda/bin/pip /usr/local/bin/pip3 \
-    cython==0.29.15 \
+ && pip install cython==0.29.15 \
     ipython==7.12.0 \
     mkl==2020.0 \
     numpy==1.19.4 \
@@ -89,16 +89,16 @@ RUN pip install --upgrade pip --trusted-host pypi.org --trusted-host files.pytho
     packaging==20.7 \
     enum-compat==0.0.3 \
     cryptography==2.8 \
-    pillow==7.0.0 \
+    Pillow==6.2.2 \
  && conda install -y -c pytorch torchserve=$TS_VERSION \
- && conda install -y -c pytorch torch-model-archiver=$TS_VERSION
+ && conda install -y -c pytorch torch-model-archiver=$TS_VERSION \
  && rm -rf /root/.cache
 
 
 
 # Uninstall and re-install torch and torchvision from the PyTorch website
 RUN pip install --no-cache-dir torch==1.7.1 \
- && pip install --no-deps --no-cache-dir torchvision==0.8.2
+ && pip install --no-deps --no-cache-dir torchvision==0.8.2 \
  && rm -rf /root/.cache
 
 
@@ -148,7 +148,6 @@ COPY conv_net /opt/program
 RUN git clone https://github.com/RamsteinWR/Retinopathy2.git
 RUN cd Retinopathy2/ && ls && pip install -r requirements.txt && rm -rf /root/.cache
 RUN cd ..
-COPY Retinopathy2  /opt/program
+COPY Retinopathy2  /opt/program/conv_net
 WORKDIR /opt/program
 RUN chmod 755 serve
-

@@ -25,12 +25,13 @@ from torch import nn
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from Retinopathy2.retinopathy.augmentations import get_test_transform
-from Retinopathy2.retinopathy.dataset import get_class_names, RetinopathyDataset
-from Retinopathy2.retinopathy.factory import get_model
-from Retinopathy2.retinopathy.inference import ApplySoftmaxToLogits, FlipLRMultiheadTTA, Flip4MultiheadTTA, \
+from conv_net.Retinopathy2.retinopathy.augmentations import get_test_transform
+from conv_net.Retinopathy2.retinopathy.dataset import RetinopathyDataset
+from conv_net.Retinopathy2.retinopathy.dataset import get_class_names
+from conv_net.Retinopathy2.retinopathy.factory import get_model
+from conv_net.Retinopathy2.retinopathy.inference import ApplySoftmaxToLogits, FlipLRMultiheadTTA, Flip4MultiheadTTA, \
     MultiscaleFlipLRMultiheadTTA
-from Retinopathy2.retinopathy.train_utils import report_checkpoint
+from conv_net.Retinopathy2.retinopathy.train_utils import report_checkpoint
 
 '''Not Changing variables'''
 data_dir = '/opt/ml/input/data'
@@ -149,13 +150,14 @@ def input_fn(request_body, request_content_type='application/json'):
         region = input_object['region']
 
         logger.info('Downloading the input diabetic retinopathy data.')
-        for i in range(10):
+        for i in range(100):
             try:
                 img = input_object[f'img{str(i)}']
                 download_from_s3(region=region, bucket=bucket, s3_filename=img, local_path=data_dir)
                 image_name.append(img)
             except KeyError as e:
                 print(e)
+                break
 
         image_df = DataFrame(image_name, columns=['id_code'])
         image_paths = image_df['id_code'].apply(lambda x: image_with_name_in_dir(data_dir, x))
